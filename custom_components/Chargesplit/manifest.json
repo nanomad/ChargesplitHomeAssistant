@@ -6,7 +6,7 @@
   "dependencies": [],
   "config_flow": true,
   "codeowners": ["@msx8020"],
-  "requirements": ["beautifulsoup4==4.10.0"],
+  "requirements": ["requests>=2.28.0"],
   "version": "0.0.1",
   "iot_class": "cloud_polling"
 }

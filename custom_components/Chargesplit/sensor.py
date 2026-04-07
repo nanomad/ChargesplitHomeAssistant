@@ -1,8 +1,5 @@
 import logging
-import requests
 import json
-
-from decimal import Decimal
 
 from homeassistant.config_entries import ConfigEntry
 
@@ -14,7 +11,6 @@ from homeassistant.components.sensor import (
 )
 
 from homeassistant.const import (
-
     UnitOfElectricCurrent,
     UnitOfElectricPotential,
     UnitOfEnergy,
@@ -41,7 +37,7 @@ async def async_setup_entry(hass, entry, async_add_devices):
             "VOLT2",
             UnitOfElectricPotential.VOLT,
             "mdi:lightning-bolt",
-            SensorDeviceClass.POWER,
+            SensorDeviceClass.VOLTAGE,       # Fix: was SensorDeviceClass.POWER
             SensorStateClass.MEASUREMENT,
             serial,
         ),
@@ -51,7 +47,7 @@ async def async_setup_entry(hass, entry, async_add_devices):
             "VOLT1",
             UnitOfElectricPotential.VOLT,
             "mdi:lightning-bolt",
-            SensorDeviceClass.POWER,
+            SensorDeviceClass.VOLTAGE,       # Fix: was SensorDeviceClass.POWER
             SensorStateClass.MEASUREMENT,
             serial,
         ),
@@ -61,7 +57,7 @@ async def async_setup_entry(hass, entry, async_add_devices):
             "VOLT3",
             UnitOfElectricPotential.VOLT,
             "mdi:lightning-bolt",
-            SensorDeviceClass.POWER,
+            SensorDeviceClass.VOLTAGE,       # Fix: was SensorDeviceClass.POWER
             SensorStateClass.MEASUREMENT,
             serial,
         ),
@@ -184,8 +180,7 @@ async def async_setup_entry(hass, entry, async_add_devices):
             SensorDeviceClass.ENERGY,
             SensorStateClass.TOTAL_INCREASING,
             serial,
-        ),    
-        
+        ),
     ]
 
     sensors = [
@@ -199,8 +194,6 @@ async def async_setup_entry(hass, entry, async_add_devices):
 
 
 class ChargesplitSensor(ChargesplitEntity, SensorEntity):
-
-    
 
     def __init__(
         self,
@@ -223,10 +216,6 @@ class ChargesplitSensor(ChargesplitEntity, SensorEntity):
         self._icon = icon
         self._device_class = device_class
         self._state_class = state_class
-    
-
-
-
 
     @property
     def state(self):
@@ -244,7 +233,7 @@ class ChargesplitSensor(ChargesplitEntity, SensorEntity):
     @property
     def device_class(self):
         return self._device_class
-        
+
     @property
     def state_class(self):
         return self._state_class

@@ -1,12 +1,9 @@
 import logging
 
-import asyncio
-
 from homeassistant.config_entries import ConfigEntry
-from homeassistant.core_config import Config
 from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import ConfigEntryNotReady
-from homeassistant.const import  Platform
+from homeassistant.const import Platform
 
 from .api import ChargesplitApi
 from .const import (
@@ -15,7 +12,6 @@ from .const import (
     CONF_SYNC_INTERVAL,
     DEFAULT_SYNC_INTERVAL,
     DOMAIN,
-    PLATFORMS,
 )
 from .coordinator import ChargesplitDataUpdateCoordinator
 
@@ -24,7 +20,7 @@ PLATFORMS = [Platform.SENSOR, Platform.SELECT]
 _LOGGER: logging.Logger = logging.getLogger(__package__)
 
 
-async def async_setup(hass: HomeAssistant, config: Config):
+async def async_setup(hass: HomeAssistant, config: dict):
     return True
 
 
@@ -34,9 +30,10 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry):
 
     code = entry.data["code"]
     serial = entry.data["serial"]
-    api = ChargesplitApi(code,serial)
-    sync_interval = DEFAULT_SYNC_INTERVAL #entry.options.get(CONF_SYNC_INTERVAL, DEFAULT_SYNC_INTERVAL)
-    _LOGGER.warning(serial)
+    api = ChargesplitApi(code, serial)
+    sync_interval = DEFAULT_SYNC_INTERVAL
+    _LOGGER.debug("Setting up Chargesplit for serial: %s", serial)
+
     coordinator = ChargesplitDataUpdateCoordinator(
         hass, api=api, update_interval=sync_interval
     )
@@ -53,26 +50,11 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry):
 
 async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry):
     """Handle removal of an entry."""
-    coordinator =  coordinator = hass.data[DOMAIN]
-
-    unloaded = all(
-        await asyncio.gather(
-            *[
-                hass.config_entries.async_forward_entry_unload(entry, platform)
-                for platform in PLATFORMS
-                if platform in coordinator.platforms
-            ]
-        )
-    )
+    unloaded = await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
     if unloaded:
-        _LOGGER.warning("chargesplit domus unloaded")
-        hass.data[DOMAIN] = []
-
-    return unloaded 
-
-
-
-
+        _LOGGER.debug("Chargesplit unloaded successfully")
+        hass.data.pop(DOMAIN, None)
+    return unloaded
 
 
 async def async_reload_entry(hass: HomeAssistant, entry: ConfigEntry) -> None:
