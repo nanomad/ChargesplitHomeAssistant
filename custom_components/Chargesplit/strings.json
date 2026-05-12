@@ -1,7 +1,16 @@
 {
-    "config": {
-      "abort": {
-        "already_configured": "Device is already configured"
+  "config": {
+    "step": {
+      "user": {
+        "title": "Chargesplit",
+        "data": {
+          "serial": "Chargepoint Serial Number",
+          "code": "Authorization Code"
+        }
       }
+    },
+    "abort": {
+      "already_configured": "Device is already configured"
     }
   }
+}
