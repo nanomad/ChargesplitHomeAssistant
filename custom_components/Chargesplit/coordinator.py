@@ -7,7 +7,7 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
 from homeassistant.helpers.update_coordinator import UpdateFailed
 
-from .const import CONF_CODE, CONF_ENABLED, DOMAIN, PLATFORMS,CHARGEPOINT_SERIAL
+from .const import CONF_CODE, CONF_ENABLED, DOMAIN, CHARGEPOINT_SERIAL
 from .api import ChargesplitApi
 
 _LOGGER: logging.Logger = logging.getLogger(__package__)
