@@ -1,12 +1,12 @@
 {
   "domain": "Chargesplit",
   "name": "Chargesplit Domus",
-  "codeowners": ["@msx8020"],
+  "codeowners": ["@nanomad"],
   "config_flow": true,
   "dependencies": [],
-  "documentation": "https://github.com/msx8020/ChargesplitHomeAssistant",
+  "documentation": "https://github.com/nanomad/ChargesplitHomeAssistant",
   "iot_class": "cloud_polling",
-  "issue_tracker": "https://github.com/msx8020/ChargesplitHomeAssistant/issues",
+  "issue_tracker": "https://github.com/nanomad/ChargesplitHomeAssistant/issues",
   "requirements": ["requests>=2.28.0"],
   "version": "0.0.3"
 }
