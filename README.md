@@ -1,7 +1,8 @@
 # Chargesplit Domus EV WallBox series custom component for Home Assistant
 
+This integration for Chargesplit Domus Series will let you integrate your wallbox inside Home Assistant as a custom component.
 
-This first integration for Chargesplit Domus Series will let you integrate your wallbox inside Home Assistant as a custom components: 
+> **Based on the original work by [@msx8020](https://github.com/msx8020/ChargesplitHomeAssistant). All credit for the initial integration goes to them.**
 
 ## Supported Models
 
@@ -23,7 +24,7 @@ follow the [instructions for adding a custom
 repository](https://hacs.xyz/docs/faq/custom_repositories) and then
 the integration will be available to install like any other.
 
-[![Open your Home Assistant instance and open a repository inside the Home Assistant Community Store.](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=msx8020&repository=ChargesplitHomeAssistant&category=integration)
+[![Open your Home Assistant instance and open a repository inside the Home Assistant Community Store.](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=nanomad&repository=ChargesplitHomeAssistant&category=integration)
 
 
 ## Configuration
