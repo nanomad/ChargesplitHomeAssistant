@@ -1,11 +1,9 @@
 import logging
 
-import asyncio
 import requests
 import urllib3
-from bs4 import BeautifulSoup
 
-from .const import DOMAIN,CONF_CODE,CHARGEPOINT_SERIAL
+from .const import DOMAIN, CONF_CODE, CHARGEPOINT_SERIAL
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -27,33 +25,29 @@ class ChargesplitApi:
         self.base_url = "https://europe-west1-chargesplithome.cloudfunctions.net/secureEndpoint"
         self.headers = HEADERS
         self.headers["Host"] = serial
-        self.headers["Origin"] = self.base_url 
-     
+        self.headers["Origin"] = self.base_url
 
     def get_data(self) -> dict:
-        # create a session with login page
         url = self.base_url
         session = requests.Session()
-        data = { "SECRET": self.code, "SERIAL": self.serial}
+        data = {"SECRET": self.code, "SERIAL": self.serial}
         response = session.post(url, data=data, verify=False)
-        return response.content  
+        return response.content
 
     def test_auth(self) -> dict:
-        # create a session with login page
         url = self.base_url
         session = requests.Session()
-        data = { "SECRET": self.code, "SERIAL": self.serial}
+        data = {"SECRET": self.code, "SERIAL": self.serial}
         response = session.post(url, data=data, verify=False)
-        if response.status_code == 200 :
+        if response.status_code == 200:
             return response.content
         else:
             raise requests.ConnectionError
 
-        
-    def set_pilot_pwr(self,value: str) -> dict:
-        _LOGGER.warning("CALLING API")
+    def set_pilot_pwr(self, value: str) -> dict:
+        _LOGGER.debug("Calling API PILOTCHANGE with value: %s", value)
         url = "https://europe-west1-chargesplithome.cloudfunctions.net/secureEndpoint"
         session = requests.Session()
-        data = { "SECRET": self.code, "SERIAL": self.serial, "COMMAND": "PILOTCHANGE","VALUE":value}
+        data = {"SECRET": self.code, "SERIAL": self.serial, "COMMAND": "PILOTCHANGE", "VALUE": value}
         response = session.post(url, data=data, verify=False)
-        return response.content  
+        return response.content
