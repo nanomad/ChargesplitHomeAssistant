@@ -26,23 +26,30 @@ class ChargesplitApi:
         self.headers = {**_BASE_HEADERS, "Host": serial, "Origin": self.base_url}
 
     def get_data(self) -> bytes:
-        with requests.Session() as session:
-            response = session.post(self.base_url, data={"SECRET": self.code, "SERIAL": self.serial}, verify=False)
-            response.raise_for_status()
-            return response.content
+        response = requests.post(
+            self.base_url,
+            data={"SECRET": self.code, "SERIAL": self.serial},
+            headers=self.headers,
+            verify=False,
+        )
+        response.raise_for_status()
+        return response.content
 
     def test_auth(self) -> None:
-        with requests.Session() as session:
-            response = session.post(self.base_url, data={"SECRET": self.code, "SERIAL": self.serial}, verify=False)
-            if response.status_code != 200:
-                raise requests.ConnectionError(f"Auth failed with status {response.status_code}")
+        response = requests.post(
+            self.base_url,
+            data={"SECRET": self.code, "SERIAL": self.serial},
+            headers=self.headers,
+            verify=False,
+        )
+        if response.status_code != 200:
+            raise requests.ConnectionError(f"Auth failed with status {response.status_code}")
 
     def set_pilot_pwr(self, value: str) -> None:
         _LOGGER.debug("Calling API PILOTCHANGE with value: %s", value)
-        with requests.Session() as session:
-            response = session.post(
-                self.base_url,
-                data={"SECRET": self.code, "SERIAL": self.serial, "COMMAND": "PILOTCHANGE", "VALUE": value},
-                verify=False,
-            )
-            response.raise_for_status()
+        requests.post(
+            self.base_url,
+            data={"SECRET": self.code, "SERIAL": self.serial, "COMMAND": "PILOTCHANGE", "VALUE": value},
+            headers=self.headers,
+            verify=False,
+        ).raise_for_status()
