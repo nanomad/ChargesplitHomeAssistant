@@ -2,7 +2,6 @@
 # Base component constants
 NAME = "Chargesplit Domus"
 DOMAIN = "Chargesplit"
-VERSION = "0.0.1"
 
 
 # Configuration and options

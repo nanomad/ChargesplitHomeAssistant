@@ -11,11 +11,12 @@ from homeassistant.components.sensor import (
 )
 
 from homeassistant.const import (
+    EntityCategory,
     UnitOfElectricCurrent,
     UnitOfElectricPotential,
     UnitOfEnergy,
     UnitOfPower,
-    UnitOfTemperature
+    UnitOfTemperature,
 )
 
 from .const import DOMAIN
@@ -31,15 +32,17 @@ async def async_setup_entry(hass, entry, async_add_devices):
     _LOGGER.info("Setting up ChargeSplit with serial " + serial)
 
     INSTRUMENTS = [
+        # (id, description, key, unit, icon, device_class, state_class, serial, entity_category)
         (
             "power_voltagel2",
             "Voltage L2",
             "VOLT2",
             UnitOfElectricPotential.VOLT,
             "mdi:lightning-bolt",
-            SensorDeviceClass.VOLTAGE,       # Fix: was SensorDeviceClass.POWER
+            SensorDeviceClass.VOLTAGE,
             SensorStateClass.MEASUREMENT,
             serial,
+            None,
         ),
         (
             "power_voltagel1",
@@ -47,9 +50,10 @@ async def async_setup_entry(hass, entry, async_add_devices):
             "VOLT1",
             UnitOfElectricPotential.VOLT,
             "mdi:lightning-bolt",
-            SensorDeviceClass.VOLTAGE,       # Fix: was SensorDeviceClass.POWER
+            SensorDeviceClass.VOLTAGE,
             SensorStateClass.MEASUREMENT,
             serial,
+            None,
         ),
         (
             "power_voltagel3",
@@ -57,9 +61,10 @@ async def async_setup_entry(hass, entry, async_add_devices):
             "VOLT3",
             UnitOfElectricPotential.VOLT,
             "mdi:lightning-bolt",
-            SensorDeviceClass.VOLTAGE,       # Fix: was SensorDeviceClass.POWER
+            SensorDeviceClass.VOLTAGE,
             SensorStateClass.MEASUREMENT,
             serial,
+            None,
         ),
         (
             "device_temperature",
@@ -70,6 +75,7 @@ async def async_setup_entry(hass, entry, async_add_devices):
             SensorDeviceClass.TEMPERATURE,
             SensorStateClass.MEASUREMENT,
             serial,
+            None,
         ),
         (
             "state_class",
@@ -80,6 +86,7 @@ async def async_setup_entry(hass, entry, async_add_devices):
             None,
             None,
             serial,
+            None,
         ),
         (
             "device_model",
@@ -90,6 +97,7 @@ async def async_setup_entry(hass, entry, async_add_devices):
             None,
             None,
             serial,
+            EntityCategory.DIAGNOSTIC,
         ),
         (
             "device_firmware",
@@ -100,6 +108,7 @@ async def async_setup_entry(hass, entry, async_add_devices):
             None,
             None,
             serial,
+            EntityCategory.DIAGNOSTIC,
         ),
         (
             "device_serial",
@@ -110,6 +119,7 @@ async def async_setup_entry(hass, entry, async_add_devices):
             None,
             None,
             serial,
+            EntityCategory.DIAGNOSTIC,
         ),
         (
             "power_charged_kWh",
@@ -120,6 +130,7 @@ async def async_setup_entry(hass, entry, async_add_devices):
             SensorDeviceClass.ENERGY,
             SensorStateClass.TOTAL_INCREASING,
             serial,
+            None,
         ),
         (
             "power_pilotamps",
@@ -130,6 +141,18 @@ async def async_setup_entry(hass, entry, async_add_devices):
             SensorDeviceClass.CURRENT,
             SensorStateClass.MEASUREMENT,
             serial,
+            None,
+        ),
+        (
+            "power_actual_amps",
+            "Actual Amps",
+            "AMP",
+            UnitOfElectricCurrent.AMPERE,
+            "mdi:current-ac",
+            SensorDeviceClass.CURRENT,
+            SensorStateClass.MEASUREMENT,
+            serial,
+            None,
         ),
         (
             "power_solar_power",
@@ -140,6 +163,7 @@ async def async_setup_entry(hass, entry, async_add_devices):
             SensorDeviceClass.POWER,
             SensorStateClass.MEASUREMENT,
             serial,
+            None,
         ),
         (
             "power_house_power",
@@ -150,6 +174,7 @@ async def async_setup_entry(hass, entry, async_add_devices):
             SensorDeviceClass.POWER,
             SensorStateClass.MEASUREMENT,
             serial,
+            None,
         ),
         (
             "power_car_charging",
@@ -160,6 +185,7 @@ async def async_setup_entry(hass, entry, async_add_devices):
             SensorDeviceClass.POWER,
             SensorStateClass.MEASUREMENT,
             serial,
+            None,
         ),
         (
             "house_charged_Wh",
@@ -170,6 +196,7 @@ async def async_setup_entry(hass, entry, async_add_devices):
             SensorDeviceClass.ENERGY,
             SensorStateClass.TOTAL_INCREASING,
             serial,
+            None,
         ),
         (
             "solar_charged_Wh",
@@ -180,14 +207,26 @@ async def async_setup_entry(hass, entry, async_add_devices):
             SensorDeviceClass.ENERGY,
             SensorStateClass.TOTAL_INCREASING,
             serial,
+            None,
+        ),
+        (
+            "schedule_state",
+            "Schedule",
+            "SCHEDULE",
+            None,
+            "mdi:calendar-clock",
+            None,
+            None,
+            serial,
+            EntityCategory.DIAGNOSTIC,
         ),
     ]
 
     sensors = [
         ChargesplitSensor(
-            coordinator, entry, id, description, key, unit, icon, device_class, state_class, serial
+            coordinator, entry, id, description, key, unit, icon, device_class, state_class, serial, entity_category
         )
-        for id, description, key, unit, icon, device_class, state_class, serial in INSTRUMENTS
+        for id, description, key, unit, icon, device_class, state_class, serial, entity_category in INSTRUMENTS
     ]
 
     async_add_devices(sensors, True)
@@ -207,6 +246,7 @@ class ChargesplitSensor(ChargesplitEntity, SensorEntity):
         device_class: str,
         state_class: str,
         serial,
+        entity_category=None,
     ):
         super().__init__(coordinator, entry)
         self._id = f"{serial}-{description}"
@@ -216,6 +256,7 @@ class ChargesplitSensor(ChargesplitEntity, SensorEntity):
         self._icon = icon
         self._device_class = device_class
         self._state_class = state_class
+        self._attr_entity_category = entity_category
 
     @property
     def state(self):

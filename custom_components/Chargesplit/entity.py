@@ -1,8 +1,9 @@
+import json
 import logging
 
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
-from .const import DOMAIN, NAME, VERSION
+from .const import DOMAIN, NAME
 from .coordinator import ChargesplitDataUpdateCoordinator
 
 _LOGGER: logging.Logger = logging.getLogger(__package__)
@@ -15,11 +16,13 @@ class ChargesplitEntity(CoordinatorEntity):
 
     @property
     def device_info(self):
+        data = json.loads(self.coordinator.data) if self.coordinator.data else {}
         return {
             "identifiers": {(DOMAIN, self.coordinator.api.host)},
             "name": NAME,
-            "model": VERSION,
             "manufacturer": NAME,
+            "model": data.get("MODEL"),
+            "sw_version": str(data.get("FWVERS")) if data.get("FWVERS") is not None else None,
         }
 
     @property
