@@ -25,8 +25,7 @@ async def async_setup(hass: HomeAssistant, config: dict):
 
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry):
-    if hass.data.get(DOMAIN) is None:
-        hass.data.setdefault(DOMAIN, {})
+    hass.data.setdefault(DOMAIN, {})
 
     code = entry.data["code"]
     serial = entry.data["serial"]
@@ -42,9 +41,9 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry):
     if not coordinator.last_update_success:
         raise ConfigEntryNotReady
 
-    hass.data[DOMAIN] = coordinator
+    hass.data[DOMAIN][entry.entry_id] = coordinator
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
-    entry.add_update_listener(async_reload_entry)
+    entry.async_on_unload(entry.add_update_listener(async_reload_entry))
     return True
 
 
@@ -53,7 +52,7 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry):
     unloaded = await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
     if unloaded:
         _LOGGER.debug("Chargesplit unloaded successfully")
-        hass.data.pop(DOMAIN, None)
+        hass.data[DOMAIN].pop(entry.entry_id, None)
     return unloaded
 
 

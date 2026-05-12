@@ -1,7 +1,6 @@
 import logging
 
 import requests
-import urllib3
 
 from .const import DOMAIN, CONF_CODE, CHARGEPOINT_SERIAL
 
@@ -13,8 +12,6 @@ HEADERS = {
     "Accept-Encoding": "gzip",
     "User-Agent": "Mozilla/5.0",
 }
-
-urllib3.disable_warnings()
 
 
 class ChargesplitApi:
@@ -31,14 +28,14 @@ class ChargesplitApi:
         url = self.base_url
         session = requests.Session()
         data = {"SECRET": self.code, "SERIAL": self.serial}
-        response = session.post(url, data=data, verify=False)
+        response = session.post(url, data=data)
         return response.content
 
     def test_auth(self) -> dict:
         url = self.base_url
         session = requests.Session()
         data = {"SECRET": self.code, "SERIAL": self.serial}
-        response = session.post(url, data=data, verify=False)
+        response = session.post(url, data=data)
         if response.status_code == 200:
             return response.content
         else:
@@ -49,5 +46,5 @@ class ChargesplitApi:
         url = "https://europe-west1-chargesplithome.cloudfunctions.net/secureEndpoint"
         session = requests.Session()
         data = {"SECRET": self.code, "SERIAL": self.serial, "COMMAND": "PILOTCHANGE", "VALUE": value}
-        response = session.post(url, data=data, verify=False)
+        response = session.post(url, data=data)
         return response.content

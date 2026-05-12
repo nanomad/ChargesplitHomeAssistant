@@ -4,9 +4,6 @@ NAME = "Chargesplit Domus"
 DOMAIN = "Chargesplit"
 VERSION = "0.0.1"
 
-# Platforms
-SENSOR = "sensor"
-PLATFORMS = [SENSOR]
 
 # Configuration and options
 CONF_ENABLED = "enabled"
