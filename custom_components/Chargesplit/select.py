@@ -7,7 +7,7 @@ from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers.entity import DeviceInfo, EntityCategory
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
-from .const import DOMAIN, NAME, VERSION
+from .const import DOMAIN, NAME
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -91,7 +91,6 @@ class ChargepointOperationModeEntity(SelectEntity):
             identifiers={(DOMAIN, self.serial)},
             name=NAME,
             manufacturer=NAME,
-            model=VERSION,
         )
 
     async def async_select_option(self, option: str) -> None:
@@ -132,7 +131,6 @@ class ChargepointLockModeEntity(SelectEntity):
             identifiers={(DOMAIN, self.serial)},
             name=NAME,
             manufacturer=NAME,
-            model=VERSION,
         )
 
     async def async_select_option(self, option: str) -> None:
@@ -173,7 +171,6 @@ class ChargepointPauseModeEntity(SelectEntity):
             identifiers={(DOMAIN, self.serial)},
             name=NAME,
             manufacturer=NAME,
-            model=VERSION,
         )
 
     async def async_select_option(self, option: str) -> None:
