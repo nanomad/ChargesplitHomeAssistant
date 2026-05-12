@@ -9,6 +9,10 @@
         }
       }
     },
+    "error": {
+      "auth": "Invalid serial or authorization code",
+      "cannot_connect": "Cannot connect to Chargesplit service. Check your network and try again."
+    },
     "abort": {
       "already_configured": "Device is already configured"
     }

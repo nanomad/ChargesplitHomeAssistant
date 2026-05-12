@@ -1,6 +1,6 @@
 import logging
-import traceback
 
+import requests
 import voluptuous as vol
 
 from homeassistant import config_entries
@@ -29,17 +29,14 @@ class ChargesplitFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
         self._errors = {}
 
         if user_input is not None:
-            valid = await self._test_credentials(
-                user_input[CONF_CODE], user_input[CHARGEPOINT_SERIAL]
-            )
-            if valid:
-                return self.async_create_entry(
-                    title=user_input[CHARGEPOINT_SERIAL], data=user_input
-                )
-            else:
-                self._errors["base"] = "auth"
+            serial = user_input[CHARGEPOINT_SERIAL]
+            await self.async_set_unique_id(serial)
+            self._abort_if_unique_id_configured()
 
-            return await self._show_config_form(user_input)
+            error = await self._test_credentials(user_input[CONF_CODE], serial)
+            if error is None:
+                return self.async_create_entry(title=serial, data=user_input)
+            self._errors["base"] = error
 
         return await self._show_config_form(user_input)
 
@@ -52,18 +49,18 @@ class ChargesplitFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
             errors=self._errors,
         )
 
-    async def _test_credentials(self, code, serial):
+    async def _test_credentials(self, code: str, serial: str) -> str | None:
+        """Return None on success, or an error key string on failure."""
         try:
             api = ChargesplitApi(code, serial)
             await self.hass.async_add_executor_job(api.test_auth)
-            return True
+            return None
+        except requests.ConnectionError:
+            _LOGGER.error("Cannot connect to Chargesplit service for serial %s", serial)
+            return "cannot_connect"
         except Exception as ex:
-            _LOGGER.error(
-                f"{DOMAIN} Exception in login : %s - traceback: %s",
-                ex,
-                traceback.format_exc(),
-            )
-        return False
+            _LOGGER.error("Authentication failed for serial %s: %s", serial, ex)
+            return "auth"
 
     @staticmethod
     @callback
