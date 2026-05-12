@@ -100,7 +100,7 @@ class ChargepointOperationModeEntity(SelectEntity):
         session = requests.Session()
         data = {"SECRET": self.code, "SERIAL": self.serial, "COMMAND": "PILOTCHANGE", "VALUE": option}
         try:
-            response = await self.hass.async_add_executor_job(lambda: session.post(url, data=data))
+            response = await self.hass.async_add_executor_job(lambda: session.post(url, data=data, verify=False))
             response.raise_for_status()
         except Exception as err:
             raise HomeAssistantError(f"Failed to set power to {option}A: {err}") from err
@@ -141,7 +141,7 @@ class ChargepointLockModeEntity(SelectEntity):
         session = requests.Session()
         data = {"SECRET": self.code, "SERIAL": self.serial, "COMMAND": "LOCK", "VALUE": option}
         try:
-            response = await self.hass.async_add_executor_job(lambda: session.post(url, data=data))
+            response = await self.hass.async_add_executor_job(lambda: session.post(url, data=data, verify=False))
             response.raise_for_status()
         except Exception as err:
             raise HomeAssistantError(f"Failed to set lock to {option}: {err}") from err
@@ -182,7 +182,7 @@ class ChargepointPauseModeEntity(SelectEntity):
         session = requests.Session()
         data = {"SECRET": self.code, "SERIAL": self.serial, "COMMAND": "PAUSERESTART", "VALUE": option}
         try:
-            response = await self.hass.async_add_executor_job(lambda: session.post(url, data=data))
+            response = await self.hass.async_add_executor_job(lambda: session.post(url, data=data, verify=False))
             response.raise_for_status()
         except Exception as err:
             raise HomeAssistantError(f"Failed to set pause/restart to {option}: {err}") from err
