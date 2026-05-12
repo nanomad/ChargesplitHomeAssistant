@@ -7,14 +7,14 @@ from .const import DOMAIN, CONF_CODE, CHARGEPOINT_SERIAL
 
 _LOGGER = logging.getLogger(__name__)
 
-HEADERS = {
+urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+
+_BASE_HEADERS = {
     "Content-Type": "application/x-www-form-urlencoded",
     "Connection": "Keep-Alive",
     "Accept-Encoding": "gzip",
     "User-Agent": "Mozilla/5.0",
 }
-
-urllib3.disable_warnings()
 
 
 class ChargesplitApi:
@@ -23,31 +23,26 @@ class ChargesplitApi:
         self.code = code
         self.serial = serial
         self.base_url = "https://europe-west1-chargesplithome.cloudfunctions.net/secureEndpoint"
-        self.headers = HEADERS
-        self.headers["Host"] = serial
-        self.headers["Origin"] = self.base_url
+        self.headers = {**_BASE_HEADERS, "Host": serial, "Origin": self.base_url}
 
-    def get_data(self) -> dict:
-        url = self.base_url
-        session = requests.Session()
-        data = {"SECRET": self.code, "SERIAL": self.serial}
-        response = session.post(url, data=data, verify=False)
-        return response.content
-
-    def test_auth(self) -> dict:
-        url = self.base_url
-        session = requests.Session()
-        data = {"SECRET": self.code, "SERIAL": self.serial}
-        response = session.post(url, data=data, verify=False)
-        if response.status_code == 200:
+    def get_data(self) -> bytes:
+        with requests.Session() as session:
+            response = session.post(self.base_url, data={"SECRET": self.code, "SERIAL": self.serial}, verify=False)
+            response.raise_for_status()
             return response.content
-        else:
-            raise requests.ConnectionError
 
-    def set_pilot_pwr(self, value: str) -> dict:
+    def test_auth(self) -> None:
+        with requests.Session() as session:
+            response = session.post(self.base_url, data={"SECRET": self.code, "SERIAL": self.serial}, verify=False)
+            if response.status_code != 200:
+                raise requests.ConnectionError(f"Auth failed with status {response.status_code}")
+
+    def set_pilot_pwr(self, value: str) -> None:
         _LOGGER.debug("Calling API PILOTCHANGE with value: %s", value)
-        url = "https://europe-west1-chargesplithome.cloudfunctions.net/secureEndpoint"
-        session = requests.Session()
-        data = {"SECRET": self.code, "SERIAL": self.serial, "COMMAND": "PILOTCHANGE", "VALUE": value}
-        response = session.post(url, data=data, verify=False)
-        return response.content
+        with requests.Session() as session:
+            response = session.post(
+                self.base_url,
+                data={"SECRET": self.code, "SERIAL": self.serial, "COMMAND": "PILOTCHANGE", "VALUE": value},
+                verify=False,
+            )
+            response.raise_for_status()
