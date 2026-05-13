@@ -102,7 +102,7 @@ class ChargepointOperationModeEntity(CoordinatorEntity, SelectEntity):
         data = {"SECRET": self.code, "SERIAL": self.serial, "COMMAND": "PILOTCHANGE", "VALUE": option}
         try:
             response = await self.hass.async_add_executor_job(
-                lambda: requests.post(_BASE_URL, data=data, verify=False)
+                lambda: requests.post(_BASE_URL, data=data)
             )
             response.raise_for_status()
         except Exception as err:
@@ -136,7 +136,7 @@ class ChargepointLockModeEntity(SelectEntity):
         data = {"SECRET": self.code, "SERIAL": self.serial, "COMMAND": "LOCK", "VALUE": option}
         try:
             response = await self.hass.async_add_executor_job(
-                lambda: requests.post(_BASE_URL, data=data, verify=False)
+                lambda: requests.post(_BASE_URL, data=data)
             )
             response.raise_for_status()
         except Exception as err:
@@ -171,7 +171,7 @@ class ChargepointPauseModeEntity(SelectEntity):
         data = {"SECRET": self.code, "SERIAL": self.serial, "COMMAND": "PAUSERESTART", "VALUE": option}
         try:
             response = await self.hass.async_add_executor_job(
-                lambda: requests.post(_BASE_URL, data=data, verify=False)
+                lambda: requests.post(_BASE_URL, data=data)
             )
             response.raise_for_status()
         except Exception as err:
