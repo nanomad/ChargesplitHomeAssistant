@@ -1,0 +1,31 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Chargesplit login",
+        "description": "Inserisci il seriale della tua wallbox (CH..) ed il codice segreto",
+        "data": {
+          "serial": "Seriale Wallbox",
+          "code": "Codice Segreto"
+        }
+      }
+    },
+    "error": {
+      "auth": "Seriale o codice errati.",
+      "cannot_connect": "Impossibile connettersi al servizio Chargesplit. Verifica la rete e riprova."
+    },
+    "abort": {
+      "already_configured": "Una wallbox con questo seriale è già configurata."
+    }
+  },
+  "options": {
+    "step": {
+      "user": {
+        "title": "Configurazione polling",
+        "data": {
+          "sync_interval": "Intervallo di sincronizzazione (secondi)"
+        }
+      }
+    }
+  }
+}

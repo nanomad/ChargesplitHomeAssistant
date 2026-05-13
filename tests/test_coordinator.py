@@ -1,6 +1,6 @@
 import logging
 
-from custom_components.Chargesplit.coordinator import _coerce_numeric
+from custom_components.chargesplit.coordinator import _coerce_numeric
 
 
 def test_casts_strings_and_ints_to_their_target_types():
