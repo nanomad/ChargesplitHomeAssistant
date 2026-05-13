@@ -3,6 +3,7 @@ import logging
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.const import Platform
+import homeassistant.helpers.config_validation as cv
 
 from .api import ChargesplitApi
 from .const import (
@@ -18,9 +19,7 @@ PLATFORMS = [Platform.SENSOR, Platform.SELECT]
 
 _LOGGER: logging.Logger = logging.getLogger(__package__)
 
-
-async def async_setup(hass: HomeAssistant, config: dict):
-    return True
+CONFIG_SCHEMA = cv.config_entry_only_config_schema(DOMAIN)
 
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry):
@@ -29,11 +28,11 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry):
     code = entry.data["code"]
     serial = entry.data["serial"]
     api = ChargesplitApi(code, serial)
-    sync_interval = DEFAULT_SYNC_INTERVAL
+    sync_interval = entry.options.get(CONF_SYNC_INTERVAL, DEFAULT_SYNC_INTERVAL)
     _LOGGER.debug("Setting up Chargesplit for serial: %s", serial)
 
     coordinator = ChargesplitDataUpdateCoordinator(
-        hass, api=api, update_interval=sync_interval
+        hass, api=api, update_interval=sync_interval, config_entry=entry
     )
     await coordinator.async_config_entry_first_refresh()
 
@@ -53,5 +52,4 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry):
 
 
 async def async_reload_entry(hass: HomeAssistant, entry: ConfigEntry) -> None:
-    await async_unload_entry(hass, entry)
-    await async_setup_entry(hass, entry)
+    await hass.config_entries.async_reload(entry.entry_id)
