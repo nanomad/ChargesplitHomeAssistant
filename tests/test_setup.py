@@ -354,28 +354,20 @@ EXPECTED_DEVICES = [
 ]
 
 EXPECTED_STATES = {
-    # TODO(v0.0.8): The next five suffer from type-passthrough.
-    # HOUSEPWR/SOLARPWR/CHARGINGPWR/TOTALCHARGED come from the wallbox API
-    # as JSON strings even at rest; AMP is an int in this fixture but is
-    # expected to return as a string during active charging (the fixture
-    # only captures the resting state). The sensor doesn't cast, so HA's
-    # recorder coerces via float() for stats and logs a warning every
-    # cycle. v0.0.8 should cast in the coordinator. When that lands,
-    # "0.00" becomes "0.0" here; AMP's "0" may also shift to "0.0".
-    "sensor.chargesplit_domus_actual_amps": "0",
+    "sensor.chargesplit_domus_actual_amps": "0.0",
     "sensor.chargesplit_domus_actual_house_consumption": "0.52",
     "sensor.chargesplit_domus_actual_solar_power": "0.52",
-    "sensor.chargesplit_domus_car_charging_power": "0.00",
-    "sensor.chargesplit_domus_charged_kwh": "0.00",
+    "sensor.chargesplit_domus_car_charging_power": "0.0",
+    "sensor.chargesplit_domus_charged_kwh": "0.0",
     # DAYHOUSE in the fixture is 5450.409999999997; HA rounds for display/stats.
     "sensor.chargesplit_domus_daily_house_wh": "5450.41",
-    "sensor.chargesplit_domus_daily_solar_wh": "0",
+    "sensor.chargesplit_domus_daily_solar_wh": "0.0",
     "sensor.chargesplit_domus_pilot_amps": "25",
     "sensor.chargesplit_domus_schedule": "1",
     "sensor.chargesplit_domus_temperature": "21.2",
-    "sensor.chargesplit_domus_voltage_l1": "0",
-    "sensor.chargesplit_domus_voltage_l2": "0",
-    "sensor.chargesplit_domus_voltage_l3": "0",
+    "sensor.chargesplit_domus_voltage_l1": "0.0",
+    "sensor.chargesplit_domus_voltage_l2": "0.0",
+    "sensor.chargesplit_domus_voltage_l3": "0.0",
     "sensor.chargesplit_domus_wallbox_firmware": "2.34",
     "sensor.chargesplit_domus_wallbox_model": "WB132H",
     "sensor.chargesplit_domus_wallbox_serial": "TESTSERIAL",
