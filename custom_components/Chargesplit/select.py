@@ -1,4 +1,3 @@
-
 import logging
 import requests
 from homeassistant.components.select import SelectEntity, SelectEntityDescription
@@ -7,10 +6,12 @@ from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers.entity import DeviceInfo, EntityCategory
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
+from homeassistant.helpers.update_coordinator import CoordinatorEntity
 from .const import DOMAIN, NAME
+from .coordinator import ChargesplitDataUpdateCoordinator
 
 _LOGGER = logging.getLogger(__name__)
-
+_BASE_URL = "https://europe-west1-chargesplithome.cloudfunctions.net/secureEndpoint"
 
 CHARGEPOINT_OPERATION_MODES = [
     "6", "7", "8", "9", "10", "11", "12", "13", "14", "15",
@@ -18,16 +19,8 @@ CHARGEPOINT_OPERATION_MODES = [
     "26", "27", "28", "29", "30", "31", "32",
 ]
 
-CHARGEPOINT_LOCK_MODES = [
-    "LOCK",
-    "UNLOCK",
-]
-
-CHARGEPOINT_PAUSE_MODES = [
-    "PAUSE",
-    "RESTART",
-]
-
+CHARGEPOINT_LOCK_MODES = ["LOCK", "UNLOCK"]
+CHARGEPOINT_PAUSE_MODES = ["PAUSE", "RESTART"]
 
 OPERATION_MODE = SelectEntityDescription(
     key="operation_mode",
@@ -57,33 +50,44 @@ async def async_setup_entry(
     async_add_entities: AddEntitiesCallback,
 ) -> None:
     """Set up the select entities from a config entry."""
+    coordinator: ChargesplitDataUpdateCoordinator = hass.data[DOMAIN][config_entry.entry_id]
     code = config_entry.data["code"]
     serial = config_entry.data["serial"]
 
     async_add_entities([
-        ChargepointOperationModeEntity(OPERATION_MODE, serial, code),
+        ChargepointOperationModeEntity(OPERATION_MODE, serial, code, coordinator),
         ChargepointLockModeEntity(LOCK_MODE, serial, code),
         ChargepointPauseModeEntity(PAUSE_MODE, serial, code),
     ])
 
 
-class ChargepointOperationModeEntity(SelectEntity):
-    """Entity for selecting the chargepoint power in amps."""
+class ChargepointOperationModeEntity(CoordinatorEntity, SelectEntity):
+    """Entity for selecting the chargepoint power in amps.
 
-    _attr_should_poll = False
+    Extends CoordinatorEntity so _attr_current_option reflects the PILOTLIMIT
+    value reported by the device after each coordinator refresh.
+    """
 
     def __init__(
         self,
         description: SelectEntityDescription,
         serial: str,
         code: str,
+        coordinator: ChargesplitDataUpdateCoordinator,
     ) -> None:
+        CoordinatorEntity.__init__(self, coordinator)
         self.entity_description = description
         self._attr_unique_id = f"{serial}-{description.key}"
         self._attr_options = CHARGEPOINT_OPERATION_MODES
-        self._attr_current_option = None  # No option selected until user picks one
         self.serial = serial
         self.code = code
+
+    @property
+    def current_option(self) -> str | None:
+        if not self.coordinator.data:
+            return None
+        value = self.coordinator.data.get("PILOTLIMIT")
+        return str(value) if value is not None else None
 
     @property
     def device_info(self) -> DeviceInfo:
@@ -95,16 +99,15 @@ class ChargepointOperationModeEntity(SelectEntity):
 
     async def async_select_option(self, option: str) -> None:
         """Change the selected option."""
-        url = "https://europe-west1-chargesplithome.cloudfunctions.net/secureEndpoint"
-        session = requests.Session()
         data = {"SECRET": self.code, "SERIAL": self.serial, "COMMAND": "PILOTCHANGE", "VALUE": option}
         try:
-            response = await self.hass.async_add_executor_job(lambda: session.post(url, data=data, verify=False))
+            response = await self.hass.async_add_executor_job(
+                lambda: requests.post(_BASE_URL, data=data)
+            )
             response.raise_for_status()
         except Exception as err:
             raise HomeAssistantError(f"Failed to set power to {option}A: {err}") from err
-        self._attr_current_option = option
-        self.async_write_ha_state()
+        await self.coordinator.async_request_refresh()
 
 
 class ChargepointLockModeEntity(SelectEntity):
@@ -112,16 +115,11 @@ class ChargepointLockModeEntity(SelectEntity):
 
     _attr_should_poll = False
 
-    def __init__(
-        self,
-        description: SelectEntityDescription,
-        serial: str,
-        code: str,
-    ) -> None:
+    def __init__(self, description: SelectEntityDescription, serial: str, code: str) -> None:
         self.entity_description = description
         self._attr_unique_id = f"{serial}-{description.key}"
         self._attr_options = CHARGEPOINT_LOCK_MODES
-        self._attr_current_option = None  # No option selected until user picks one
+        self._attr_current_option = None
         self.serial = serial
         self.code = code
 
@@ -135,11 +133,11 @@ class ChargepointLockModeEntity(SelectEntity):
 
     async def async_select_option(self, option: str) -> None:
         """Change the selected option."""
-        url = "https://europe-west1-chargesplithome.cloudfunctions.net/secureEndpoint"
-        session = requests.Session()
         data = {"SECRET": self.code, "SERIAL": self.serial, "COMMAND": "LOCK", "VALUE": option}
         try:
-            response = await self.hass.async_add_executor_job(lambda: session.post(url, data=data, verify=False))
+            response = await self.hass.async_add_executor_job(
+                lambda: requests.post(_BASE_URL, data=data)
+            )
             response.raise_for_status()
         except Exception as err:
             raise HomeAssistantError(f"Failed to set lock to {option}: {err}") from err
@@ -152,16 +150,11 @@ class ChargepointPauseModeEntity(SelectEntity):
 
     _attr_should_poll = False
 
-    def __init__(
-        self,
-        description: SelectEntityDescription,
-        serial: str,
-        code: str,
-    ) -> None:
+    def __init__(self, description: SelectEntityDescription, serial: str, code: str) -> None:
         self.entity_description = description
         self._attr_unique_id = f"{serial}-{description.key}"
         self._attr_options = CHARGEPOINT_PAUSE_MODES
-        self._attr_current_option = None  # No option selected until user picks one
+        self._attr_current_option = None
         self.serial = serial
         self.code = code
 
@@ -175,11 +168,11 @@ class ChargepointPauseModeEntity(SelectEntity):
 
     async def async_select_option(self, option: str) -> None:
         """Change the selected option."""
-        url = "https://europe-west1-chargesplithome.cloudfunctions.net/secureEndpoint"
-        session = requests.Session()
         data = {"SECRET": self.code, "SERIAL": self.serial, "COMMAND": "PAUSERESTART", "VALUE": option}
         try:
-            response = await self.hass.async_add_executor_job(lambda: session.post(url, data=data, verify=False))
+            response = await self.hass.async_add_executor_job(
+                lambda: requests.post(_BASE_URL, data=data)
+            )
             response.raise_for_status()
         except Exception as err:
             raise HomeAssistantError(f"Failed to set pause/restart to {option}: {err}") from err
