@@ -1,11 +1,8 @@
 import logging
 
 import requests
-import urllib3
 
 _LOGGER = logging.getLogger(__name__)
-
-urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 _BASE_URL = "https://europe-west1-chargesplithome.cloudfunctions.net/secureEndpoint"
 
@@ -20,7 +17,6 @@ class ChargesplitApi:
         response = requests.post(
             _BASE_URL,
             data={"SECRET": self.code, "SERIAL": self.serial},
-            verify=False,
         )
         response.raise_for_status()
         return response.content
@@ -29,7 +25,6 @@ class ChargesplitApi:
         response = requests.post(
             _BASE_URL,
             data={"SECRET": self.code, "SERIAL": self.serial},
-            verify=False,
         )
         if response.status_code != 200:
             raise requests.ConnectionError(f"Auth failed with status {response.status_code}")
@@ -39,5 +34,4 @@ class ChargesplitApi:
         requests.post(
             _BASE_URL,
             data={"SECRET": self.code, "SERIAL": self.serial, "COMMAND": "PILOTCHANGE", "VALUE": value},
-            verify=False,
         ).raise_for_status()
