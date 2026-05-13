@@ -1,5 +1,4 @@
 import logging
-import json
 
 from homeassistant.config_entries import ConfigEntry
 
@@ -259,12 +258,13 @@ class ChargesplitSensor(ChargesplitEntity, SensorEntity):
         self._attr_entity_category = entity_category
 
     @property
-    def state(self):
-        a = json.loads(self.coordinator.data)
-        return a[self.key]
+    def native_value(self):
+        if not self.coordinator.data:
+            return None
+        return self.coordinator.data.get(self.key)
 
     @property
-    def unit_of_measurement(self):
+    def native_unit_of_measurement(self):
         return self.unit
 
     @property

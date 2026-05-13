@@ -32,7 +32,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry):
     _LOGGER.debug("Setting up Chargesplit for serial: %s", serial)
 
     coordinator = ChargesplitDataUpdateCoordinator(
-        hass, api=api, update_interval=sync_interval
+        hass, api=api, update_interval=sync_interval, config_entry=entry
     )
     await coordinator.async_config_entry_first_refresh()
 
