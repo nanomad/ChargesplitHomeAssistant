@@ -5,13 +5,19 @@ from custom_components.Chargesplit.coordinator import _coerce_numeric
 
 def test_casts_strings_and_ints_to_their_target_types():
     result = _coerce_numeric({"AMP": "13.5", "VOLT1": 230, "PILOTLIMIT": "25"})
-    assert result == {"AMP": 13.5, "VOLT1": 230.0, "PILOTLIMIT": 25}
+    assert result["AMP"] == 13.5 and isinstance(result["AMP"], float)
+    # 230 is int in input; float caster must lift it to 230.0 (Python's ==
+    # treats 230 == 230.0 as True, so the isinstance check is what catches a
+    # regression where the lift gets dropped).
+    assert result["VOLT1"] == 230.0 and isinstance(result["VOLT1"], float)
+    assert result["PILOTLIMIT"] == 25 and isinstance(result["PILOTLIMIT"], int)
 
 
 def test_pilotlimit_handles_stringified_float():
     # Wallbox may send "25.0" as PILOTLIMIT; int("25.0") raises, but _to_int
     # goes through float() and truncates so the Select's str() compare works.
-    assert _coerce_numeric({"PILOTLIMIT": "25.0"}) == {"PILOTLIMIT": 25}
+    result = _coerce_numeric({"PILOTLIMIT": "25.0"})
+    assert result["PILOTLIMIT"] == 25 and isinstance(result["PILOTLIMIT"], int)
 
 
 def test_warns_on_bad_value_and_leaves_it_unchanged(caplog):
