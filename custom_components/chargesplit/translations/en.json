@@ -1,0 +1,31 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Chargesplit Authentication",
+        "description": "Enter your wallbox serial and secret",
+        "data": {
+          "serial": "Wallbox Serial",
+          "code": "Wallbox Secret"
+        }
+      }
+    },
+    "error": {
+      "auth": "Serial or secret is incorrect.",
+      "cannot_connect": "Cannot connect to Chargesplit service. Check your network and try again."
+    },
+    "abort": {
+      "already_configured": "A wallbox with this serial is already configured."
+    }
+  },
+  "options": {
+    "step": {
+      "user": {
+        "title": "Polling Configuration",
+        "data": {
+          "sync_interval": "Sync Interval (seconds)"
+        }
+      }
+    }
+  }
+}
