@@ -16,6 +16,13 @@ _LOGGER: logging.Logger = logging.getLogger(__package__)
 # coercion HA's recorder warns every cycle and Energy dashboard math depends on
 # its float() coercion succeeding for every reading. Cast at the data-layer
 # boundary so all consumers see uniformly typed values.
+
+
+def _to_int(value):
+    # Goes through float() so stringified floats like "25.0" don't raise.
+    return int(float(value))
+
+
 _NUMERIC_KEYS = {
     "AMP": float,
     "VOLT1": float,
@@ -28,22 +35,21 @@ _NUMERIC_KEYS = {
     "TOTALCHARGED": float,
     "DAYHOUSE": float,
     "DAYSOLAR": float,
-    "PILOTLIMIT": int,
+    "PILOTLIMIT": _to_int,
 }
 
 
 def _coerce_numeric(data: dict) -> dict:
+    coerced = dict(data)
     for key, caster in _NUMERIC_KEYS.items():
-        value = data.get(key)
+        value = coerced.get(key)
         if value is None:
             continue
         try:
-            data[key] = caster(value)
+            coerced[key] = caster(value)
         except (TypeError, ValueError):
-            _LOGGER.warning(
-                "Could not coerce %s=%r to %s, leaving as-is", key, value, caster.__name__
-            )
-    return data
+            _LOGGER.warning("Could not coerce %s=%r, leaving as-is", key, value)
+    return coerced
 
 
 class ChargesplitDataUpdateCoordinator(DataUpdateCoordinator):
