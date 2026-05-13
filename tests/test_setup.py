@@ -345,13 +345,15 @@ EXPECTED_DEVICES = [
 ]
 
 EXPECTED_STATES = {
+    # TODO(v0.0.8): The next five suffer from type-passthrough.
+    # HOUSEPWR/SOLARPWR/CHARGINGPWR/TOTALCHARGED come from the wallbox API
+    # as JSON strings even at rest; AMP is an int in this fixture but is
+    # expected to return as a string during active charging (the fixture
+    # only captures the resting state). The sensor doesn't cast, so HA's
+    # recorder coerces via float() for stats and logs a warning every
+    # cycle. v0.0.8 should cast in the coordinator. When that lands,
+    # "0.00" becomes "0.0" here; AMP's "0" may also shift to "0.0".
     "sensor.chargesplit_domus_actual_amps": "0",
-    # TODO(v0.0.8): The next four come through as strings because the wallbox
-    # API returns HOUSEPWR/SOLARPWR/CHARGINGPWR/TOTALCHARGED as JSON strings
-    # and the sensor doesn't cast. HA's recorder coerces for stats but logs a
-    # warning every cycle. v0.0.8 should cast to float in the coordinator;
-    # when that lands, "0.00" becomes "0.0" here (the "0.52" entries don't
-    # visibly change, but the underlying fix covers all four).
     "sensor.chargesplit_domus_actual_house_consumption": "0.52",
     "sensor.chargesplit_domus_actual_solar_power": "0.52",
     "sensor.chargesplit_domus_car_charging_power": "0.00",
