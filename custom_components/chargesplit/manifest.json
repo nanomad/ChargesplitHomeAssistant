@@ -4,9 +4,9 @@
   "codeowners": ["@nanomad"],
   "config_flow": true,
   "dependencies": [],
-  "documentation": "https://github.com/nanomad/ChargesplitHomeAssistant",
+  "documentation": "https://github.com/nanomad/hass-chargesplit",
   "iot_class": "cloud_polling",
-  "issue_tracker": "https://github.com/nanomad/ChargesplitHomeAssistant/issues",
+  "issue_tracker": "https://github.com/nanomad/hass-chargesplit/issues",
   "requirements": ["requests>=2.28.0"],
   "version": "0.1.0"
 }
