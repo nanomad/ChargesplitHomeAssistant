@@ -1,4 +1,3 @@
-import json
 from pathlib import Path
 from unittest.mock import patch
 
@@ -35,10 +34,9 @@ async def test_setup_produces_correct_entities(hass):
         for e in registry.entities.values()
         if e.config_entry_id == entry.entry_id
     ]
-    entries.sort(key=lambda x: x["unique_id"])
 
-    print(json.dumps(entries, indent=2))
-    assert entries == EXPECTED_V007
+    by_unique_id = lambda e: e["unique_id"]
+    assert sorted(entries, key=by_unique_id) == sorted(EXPECTED_V007, key=by_unique_id)
 
 
 EXPECTED_V007 = [
