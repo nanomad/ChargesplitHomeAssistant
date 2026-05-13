@@ -85,11 +85,10 @@ async def test_setup_produces_correct_entities(hass):
     by_identifiers = lambda d: str(d["identifiers"])
     assert sorted(devices, key=by_identifiers) == sorted(EXPECTED_DEVICES, key=by_identifiers)
 
-    # State-value spot checks: prove the JSON-key -> sensor wiring didn't shift.
-    # One numeric sensor, one stringified-number sensor, one text status.
-    assert hass.states.get("sensor.chargesplit_domus_temperature").state == "21.2"
-    assert hass.states.get("sensor.chargesplit_domus_car_charging_power").state == "0.00"
-    assert hass.states.get("sensor.chargesplit_domus_wallbox_status").state == "SCHEDULE"
+    # State-value assertions: every sensor's JSON-key -> state wiring is locked.
+    for entity_id, expected in EXPECTED_STATES.items():
+        actual = hass.states.get(entity_id).state
+        assert actual == expected, f"{entity_id}: expected {expected!r}, got {actual!r}"
 
 
 EXPECTED_V007 = [
@@ -344,3 +343,24 @@ EXPECTED_DEVICES = [
         "name": "Chargesplit Domus",
     },
 ]
+
+EXPECTED_STATES = {
+    "sensor.chargesplit_domus_actual_amps": "0",
+    "sensor.chargesplit_domus_actual_house_consumption": "0.52",
+    "sensor.chargesplit_domus_actual_solar_power": "0.52",
+    "sensor.chargesplit_domus_car_charging_power": "0.00",
+    "sensor.chargesplit_domus_charged_kwh": "0.00",
+    # DAYHOUSE in the fixture is 5450.409999999997; HA rounds for display/stats.
+    "sensor.chargesplit_domus_daily_house_wh": "5450.41",
+    "sensor.chargesplit_domus_daily_solar_wh": "0",
+    "sensor.chargesplit_domus_pilot_amps": "25",
+    "sensor.chargesplit_domus_schedule": "1",
+    "sensor.chargesplit_domus_temperature": "21.2",
+    "sensor.chargesplit_domus_voltage_l1": "0",
+    "sensor.chargesplit_domus_voltage_l2": "0",
+    "sensor.chargesplit_domus_voltage_l3": "0",
+    "sensor.chargesplit_domus_wallbox_firmware": "2.34",
+    "sensor.chargesplit_domus_wallbox_model": "WB132H",
+    "sensor.chargesplit_domus_wallbox_serial": "TESTSERIAL",
+    "sensor.chargesplit_domus_wallbox_status": "SCHEDULE",
+}
