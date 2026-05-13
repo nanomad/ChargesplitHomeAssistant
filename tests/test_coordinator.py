@@ -24,7 +24,11 @@ def test_warns_on_bad_value_and_leaves_it_unchanged(caplog):
     with caplog.at_level(logging.WARNING):
         result = _coerce_numeric({"AMP": "not-a-number"})
     assert result == {"AMP": "not-a-number"}
-    assert "Could not coerce" in caplog.text
+    # Locks the format: key, value, and target type all appear so a debugger
+    # can identify the offending field and intent.
+    assert "AMP" in caplog.text
+    assert "not-a-number" in caplog.text
+    assert "float" in caplog.text
 
 
 def test_does_not_mutate_input():

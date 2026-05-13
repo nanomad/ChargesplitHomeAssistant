@@ -23,6 +23,10 @@ def _to_int(value):
     return int(float(value))
 
 
+# Logged in the coerce warning; "int" reads better than the helper name.
+_to_int.__name__ = "int"
+
+
 _NUMERIC_KEYS = {
     "AMP": float,
     "VOLT1": float,
@@ -48,7 +52,10 @@ def _coerce_numeric(data: dict) -> dict:
         try:
             coerced[key] = caster(value)
         except (TypeError, ValueError):
-            _LOGGER.warning("Could not coerce %s=%r, leaving as-is", key, value)
+            _LOGGER.warning(
+                "Could not coerce %s=%r to %s, leaving as-is",
+                key, value, caster.__name__,
+            )
     return coerced
 
 
