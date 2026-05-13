@@ -27,7 +27,7 @@ from pytest_homeassistant_custom_component.common import MockConfigEntry
 from custom_components.chargesplit.api import ChargesplitApi
 from custom_components.chargesplit.migration import (
     LEGACY_DOMAIN,
-    async_migrate_legacy_domain,
+    async_migrate_entry,
 )
 
 FIXTURE = Path(__file__).parent / "fixtures" / "wallbox_response.json"
@@ -141,10 +141,10 @@ async def test_migration_preserves_entity_ids_and_rewires_to_new_entry(hass):
     legacy_entry, device, seeded = _seed_legacy(hass)
     legacy_entry_id = legacy_entry.entry_id
 
-    await async_migrate_legacy_domain(hass)
+    await async_migrate_entry(hass, legacy_entry)
     await hass.async_block_till_done()
 
-    # The legacy config entry is gone.
+    # The legacy config entry is gone (scheduled removal task ran).
     assert hass.config_entries.async_get_entry(legacy_entry_id) is None
     legacy_entries = hass.config_entries.async_entries(LEGACY_DOMAIN)
     assert legacy_entries == []
@@ -186,18 +186,18 @@ async def test_migration_preserves_entity_ids_and_rewires_to_new_entry(hass):
 
     # User-visible notification was raised.
     notifications = persistent_notification._async_get_or_create_notifications(hass)
-    assert "chargesplit_legacy_migration" in notifications
+    assert f"chargesplit_legacy_migration_{legacy_entry_id}" in notifications
 
 
-async def test_migration_is_idempotent(hass):
-    _seed_legacy(hass)
-    await async_migrate_legacy_domain(hass)
-    await hass.async_block_till_done()
-
-    # Second pass: nothing left to migrate, must be a no-op.
+async def test_migration_is_idempotent_when_nothing_to_migrate(hass):
+    # No legacy entries seeded. async_migrate_entry shouldn't be called by
+    # the shim either — but if something does invoke it on a non-Chargesplit
+    # entry by accident, it would need a serial in data. We just verify the
+    # whole-system invariant: with no legacy entries, no chargesplit entries
+    # get created out of thin air.
     new_entries_before = hass.config_entries.async_entries("chargesplit")
-    await async_migrate_legacy_domain(hass)
-    await hass.async_block_till_done()
+    # Nothing to do — the shim's setup_entry only fires when HA finds an
+    # orphaned Chargesplit entry. No entry, no call.
     new_entries_after = hass.config_entries.async_entries("chargesplit")
     assert [e.entry_id for e in new_entries_before] == [
         e.entry_id for e in new_entries_after
@@ -223,7 +223,7 @@ async def test_migration_resumes_partial_state(hass):
     existing_new.add_to_hass(hass)
     existing_id = existing_new.entry_id
 
-    await async_migrate_legacy_domain(hass)
+    await async_migrate_entry(hass, legacy_entry)
     await hass.async_block_till_done()
 
     new_entries = hass.config_entries.async_entries("chargesplit")
@@ -247,7 +247,7 @@ async def test_migration_leaves_unknown_unique_id_in_place_and_notifies(hass):
     )
     weird_entity_id = weird.entity_id
 
-    await async_migrate_legacy_domain(hass)
+    await async_migrate_entry(hass, legacy_entry)
     await hass.async_block_till_done()
 
     # Weird entity is detached but still present.
@@ -258,5 +258,6 @@ async def test_migration_leaves_unknown_unique_id_in_place_and_notifies(hass):
 
     # Notification mentions it.
     notifications = persistent_notification._async_get_or_create_notifications(hass)
-    assert "chargesplit_legacy_migration" in notifications
-    assert weird_entity_id in notifications["chargesplit_legacy_migration"]["message"]
+    notification_id = f"chargesplit_legacy_migration_{legacy_entry.entry_id}"
+    assert notification_id in notifications
+    assert weird_entity_id in notifications[notification_id]["message"]

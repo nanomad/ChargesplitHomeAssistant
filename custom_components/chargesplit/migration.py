@@ -5,19 +5,18 @@ brands.home-assistant.io was case-insensitive at the time. It later started
 requiring all-lowercase domains, so v0.1.0 renamed to `chargesplit`. Existing
 installs end up with orphaned entries: the old config entry, all entity
 registry rows (platform="Chargesplit", verbose unique_ids), and the device
-row (identifiers={("Chargesplit", serial)}) are pointed at an integration
-that no longer exists on disk.
+row (identifiers={("Chargesplit", serial)}) all point at an integration that
+no longer exists on disk.
 
 This module rewrites that state in-place so entity_ids stay stable —
 preserving long-term-statistics history (keyed by entity_id), dashboards,
 and automations.
 
-The migration runs from `async_setup` on the new `chargesplit` domain. For
-that to fire at all when only orphaned `Chargesplit` entries exist, the
-sibling `custom_components/Chargesplit/` shim manifest declares
-`dependencies: ["chargesplit"]` — HA loads the shim because the orphaned
-entry references it, and the dependency forces `chargesplit.async_setup` to
-run first.
+Trigger. The sibling `custom_components/Chargesplit/` shim declares
+`dependencies: ["chargesplit"]`. HA loads the shim because legacy entries
+reference it, and the dependency makes it load `chargesplit` first. The
+shim's `async_setup_entry` then calls `async_migrate_entry` for each
+legacy entry; that function is the only entry point in this module.
 """
 
 from __future__ import annotations
@@ -83,168 +82,126 @@ def migrate_unique_id(old: str, serial: str) -> str | None:
     return None
 
 
-_REENTRY_GUARD_KEY = "_chargesplit_migration_in_progress"
+async def async_migrate_entry(hass: HomeAssistant, legacy_entry: ConfigEntry) -> None:
+    """Migrate one orphaned `Chargesplit` config entry to `chargesplit`.
 
+    Sequencing (all public API):
 
-async def async_migrate_legacy_domain(hass: HomeAssistant) -> None:
-    """Rewrite orphaned `Chargesplit` config + registry rows to `chargesplit`.
-
-    Idempotent: safe to call repeatedly. If interrupted mid-way and re-run,
-    it picks up the partially-migrated state (new chargesplit entry already
-    exists for the serial) instead of duplicating.
-
-    Sequencing rationale (all public API):
-
-    1. Rewrite legacy entity rows: change `platform` to `chargesplit` and
-       `unique_id` to the v0.1.0 shape, but leave `config_entry_id` pointing
-       at the legacy entry. The new entry doesn't exist yet, and that's
-       fine — `async_update_entity_platform` accepts a same-value
-       `new_config_entry_id` (it's just gating against accidental orphaning
-       when the entity is already linked).
-    2. Rewrite the device's identifier tuple. Leave config-entry membership
-       alone.
+    1. Rewrite the legacy entity rows in place: new `platform=chargesplit`
+       and new `unique_id`, but `new_config_entry_id=legacy_entry.entry_id`
+       (the gating value, not a real change — `async_update_entity_platform`
+       refuses UNDEFINED when a row is already linked).
+    2. Rewrite the device's identifier tuple, leaving config-entry
+       membership alone.
     3. `async_add` the new entry. Its platform setup calls
-       `async_get_or_create(domain, "chargesplit", new_unique_id)` and
-       `async_get_or_create(... identifiers=...)`, which match the rows
-       we pre-migrated in steps 1-2 and re-link them to the new entry as
-       a side effect of `_async_update_entity` / `_async_update_device`.
-    4. Remove the legacy entry. The new entry is already in the device's
-       config_entries set; HA cascade-clears the legacy id during removal.
+       `async_get_or_create(... platform, unique_id)` and
+       `async_get_or_create(... identifiers=...)`, which match the
+       pre-migrated rows and adopt them — `_async_update_entity` /
+       `_async_update_device` set `config_entry_id` to the new entry as
+       a side effect.
+    4. Schedule the legacy entry's removal as a follow-up task. We can't
+       `await async_remove(legacy_entry.entry_id)` synchronously: this
+       function runs inside the shim's `async_setup_entry`, which holds
+       the legacy entry's setup_lock; `async_remove` would try to acquire
+       the same lock and deadlock. `hass.async_create_task` defers it
+       past the current setup, where the lock is no longer held.
 
-    Re-entry guard: `async_add` in step 3 awaits the new entry's setup. If
-    `chargesplit` hasn't been loaded yet (the typical bootstrap order has
-    HA load us first via the legacy-domain shim's `dependencies`, but tests
-    and edge cases can invert this), HA loads it inline, which calls
-    `chargesplit.async_setup` again, which calls *this* function again.
-    The inner call would complete the migration first; the outer call would
-    then trip over an already-removed legacy entry. The hass.data flag
-    below short-circuits the inner call instead.
+    Idempotent: if a previous attempt crashed after step 3 but before
+    step 4, the next pass re-runs steps 1-2 as no-ops on the already-
+    migrated rows, finds the existing chargesplit entry in step 3 and
+    reuses it, and re-schedules removal in step 4.
     """
-    if hass.data.get(_REENTRY_GUARD_KEY):
+    serial = legacy_entry.data.get("serial")
+    if not serial:
+        _LOGGER.warning(
+            "Legacy Chargesplit entry %s has no serial in data; skipping",
+            legacy_entry.entry_id,
+        )
         return
-
-    legacy_entries = list(hass.config_entries.async_entries(LEGACY_DOMAIN))
-    if not legacy_entries:
-        return
-
-    hass.data[_REENTRY_GUARD_KEY] = True
-    try:
-        await _do_migrate(hass, legacy_entries)
-    finally:
-        hass.data.pop(_REENTRY_GUARD_KEY, None)
-
-
-async def _do_migrate(
-    hass: HomeAssistant, legacy_entries: list[ConfigEntry]
-) -> None:
 
     ent_reg = er.async_get(hass)
     dev_reg = dr.async_get(hass)
-    migrated_count = 0
     unrecognized: list[str] = []
 
-    for legacy_entry in legacy_entries:
-        serial = legacy_entry.data.get("serial")
-        if not serial:
+    # Step 1: rewrite entity rows in place.
+    for legacy_row in er.async_entries_for_config_entry(
+        ent_reg, legacy_entry.entry_id
+    ):
+        new_unique_id = migrate_unique_id(legacy_row.unique_id, serial)
+        if new_unique_id is None:
             _LOGGER.warning(
-                "Legacy Chargesplit entry %s has no serial in data; skipping",
-                legacy_entry.entry_id,
-            )
-            continue
-
-        # Step 1: rewrite entity rows. Keep them pointed at the legacy entry
-        # for now; the new entry's platform setup will adopt them via
-        # `async_get_or_create` once it runs in step 3.
-        for legacy_row in er.async_entries_for_config_entry(
-            ent_reg, legacy_entry.entry_id
-        ):
-            new_unique_id = migrate_unique_id(legacy_row.unique_id, serial)
-            if new_unique_id is None:
-                _LOGGER.warning(
-                    "Could not migrate entity %s (unique_id=%s); leaving under legacy domain",
-                    legacy_row.entity_id,
-                    legacy_row.unique_id,
-                )
-                unrecognized.append(legacy_row.entity_id)
-                continue
-            ent_reg.async_update_entity_platform(
+                "Could not migrate entity %s (unique_id=%s); leaving under legacy domain",
                 legacy_row.entity_id,
-                DOMAIN,
-                new_config_entry_id=legacy_entry.entry_id,
-                new_unique_id=new_unique_id,
+                legacy_row.unique_id,
             )
-
-        # Step 2: rewrite device identifiers in place.
-        for legacy_device in dr.async_entries_for_config_entry(
-            dev_reg, legacy_entry.entry_id
-        ):
-            new_identifiers = {
-                (DOMAIN if ident_domain == LEGACY_DOMAIN else ident_domain, ident_value)
-                for (ident_domain, ident_value) in legacy_device.identifiers
-            }
-            dev_reg.async_update_device(
-                legacy_device.id, new_identifiers=new_identifiers
-            )
-
-        # Detach unrecognized rows before removing the legacy entry so they
-        # aren't cascade-deleted. The notification at the bottom flags them
-        # for manual cleanup.
-        for legacy_row in er.async_entries_for_config_entry(
-            ent_reg, legacy_entry.entry_id
-        ):
-            ent_reg.async_update_entity(
-                legacy_row.entity_id, config_entry_id=None
-            )
-
-        # Step 3: stand up the new entry. If a prior run got partway through
-        # and crashed, an entry for this serial already exists — reuse it
-        # instead of creating a duplicate.
-        new_entry = _find_existing_chargesplit_entry(hass, serial)
-        if new_entry is None:
-            new_entry = ConfigEntry(
-                version=legacy_entry.version,
-                minor_version=legacy_entry.minor_version,
-                domain=DOMAIN,
-                title=legacy_entry.title,
-                data=dict(legacy_entry.data),
-                options=dict(legacy_entry.options),
-                source=SOURCE_IMPORT,
-                unique_id=legacy_entry.unique_id,
-                discovery_keys=MappingProxyType({}),
-                subentries_data=None,
-            )
-            await hass.config_entries.async_add(new_entry)
-        # Platform setup during async_add called async_get_or_create for
-        # each entity and device. Those calls matched the pre-migrated rows
-        # by (platform, unique_id) and identifiers respectively, and updated
-        # their config_entry_id / config_entries to point at new_entry.
-
-        # Step 4: remove the legacy entry. The device now has both entries
-        # in its config_entries set; HA will clean the legacy one out as
-        # part of the cascade.
-        await hass.config_entries.async_remove(legacy_entry.entry_id)
-
-        migrated_count += 1
-
-    if migrated_count:
-        message = (
-            f"Migrated {migrated_count} Chargesplit config "
-            f"entr{'y' if migrated_count == 1 else 'ies'} from the legacy "
-            "`Chargesplit` domain to `chargesplit`. Entity IDs were preserved, "
-            "so dashboards, automations, and statistics history continue to work."
+            unrecognized.append(legacy_row.entity_id)
+            continue
+        ent_reg.async_update_entity_platform(
+            legacy_row.entity_id,
+            DOMAIN,
+            new_config_entry_id=legacy_entry.entry_id,
+            new_unique_id=new_unique_id,
         )
-        if unrecognized:
-            message += (
-                "\n\nThese entities had an unrecognized unique_id format and "
-                "were left untouched — you may need to delete them manually:\n"
-                + "\n".join(f"- {eid}" for eid in unrecognized)
-            )
-        persistent_notification.async_create(
-            hass,
-            message,
-            title="Chargesplit migration",
-            notification_id="chargesplit_legacy_migration",
+
+    # Step 2: rewrite device identifiers.
+    for legacy_device in dr.async_entries_for_config_entry(
+        dev_reg, legacy_entry.entry_id
+    ):
+        new_identifiers = {
+            (DOMAIN if ident_domain == LEGACY_DOMAIN else ident_domain, ident_value)
+            for (ident_domain, ident_value) in legacy_device.identifiers
+        }
+        dev_reg.async_update_device(
+            legacy_device.id, new_identifiers=new_identifiers
         )
+
+    # Detach unrecognized rows so the upcoming legacy-entry removal doesn't
+    # cascade-delete them. The notification below flags them for the user.
+    for legacy_row in er.async_entries_for_config_entry(
+        ent_reg, legacy_entry.entry_id
+    ):
+        ent_reg.async_update_entity(legacy_row.entity_id, config_entry_id=None)
+
+    # Step 3: create (or adopt, on retry) the chargesplit entry.
+    new_entry = _find_existing_chargesplit_entry(hass, serial)
+    if new_entry is None:
+        new_entry = ConfigEntry(
+            version=legacy_entry.version,
+            minor_version=legacy_entry.minor_version,
+            domain=DOMAIN,
+            title=legacy_entry.title,
+            data=dict(legacy_entry.data),
+            options=dict(legacy_entry.options),
+            source=SOURCE_IMPORT,
+            unique_id=legacy_entry.unique_id,
+            discovery_keys=MappingProxyType({}),
+            subentries_data=None,
+        )
+        await hass.config_entries.async_add(new_entry)
+
+    # Step 4: schedule legacy removal after our caller's setup_lock releases.
+    hass.async_create_task(
+        hass.config_entries.async_remove(legacy_entry.entry_id),
+        f"chargesplit-migration-remove-{legacy_entry.entry_id}",
+    )
+
+    message = (
+        "Migrated one Chargesplit config entry from the legacy `Chargesplit` "
+        "domain to `chargesplit`. Entity IDs were preserved, so dashboards, "
+        "automations, and statistics history continue to work."
+    )
+    if unrecognized:
+        message += (
+            "\n\nThese entities had an unrecognized unique_id format and "
+            "were left untouched — you may need to delete them manually:\n"
+            + "\n".join(f"- {eid}" for eid in unrecognized)
+        )
+    persistent_notification.async_create(
+        hass,
+        message,
+        title="Chargesplit migration",
+        notification_id=f"chargesplit_legacy_migration_{legacy_entry.entry_id}",
+    )
 
 
 def _find_existing_chargesplit_entry(
