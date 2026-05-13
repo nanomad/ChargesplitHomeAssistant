@@ -1,0 +1,13 @@
+{
+  "domain": "Chargesplit",
+  "name": "Chargesplit (legacy domain shim)",
+  "codeowners": ["@nanomad"],
+  "config_flow": false,
+  "dependencies": ["chargesplit"],
+  "documentation": "https://github.com/nanomad/ChargesplitHomeAssistant",
+  "integration_type": "system",
+  "iot_class": "cloud_polling",
+  "issue_tracker": "https://github.com/nanomad/ChargesplitHomeAssistant/issues",
+  "requirements": [],
+  "version": "0.1.0"
+}

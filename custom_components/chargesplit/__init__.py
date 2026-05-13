@@ -14,12 +14,18 @@ from .const import (
     DOMAIN,
 )
 from .coordinator import ChargesplitDataUpdateCoordinator
+from .migration import async_migrate_legacy_domain
 
 PLATFORMS = [Platform.SENSOR, Platform.SELECT]
 
 _LOGGER: logging.Logger = logging.getLogger(__package__)
 
 CONFIG_SCHEMA = cv.config_entry_only_config_schema(DOMAIN)
+
+
+async def async_setup(hass: HomeAssistant, config: dict) -> bool:
+    await async_migrate_legacy_domain(hass)
+    return True
 
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry):
