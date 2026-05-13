@@ -3,6 +3,7 @@ import logging
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.const import Platform
+import homeassistant.helpers.config_validation as cv
 
 from .api import ChargesplitApi
 from .const import (
@@ -18,9 +19,7 @@ PLATFORMS = [Platform.SENSOR, Platform.SELECT]
 
 _LOGGER: logging.Logger = logging.getLogger(__package__)
 
-
-async def async_setup(hass: HomeAssistant, config: dict):
-    return True
+CONFIG_SCHEMA = cv.config_entry_only_config_schema(DOMAIN)
 
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry):
