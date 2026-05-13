@@ -12,6 +12,7 @@ flipped (state_class, unit_of_measurement, device_class). Setting up a
 fresh entry under v0.1.0 doesn't exercise migration.
 """
 
+from operator import itemgetter
 from pathlib import Path
 from unittest.mock import patch
 
@@ -66,11 +67,11 @@ async def test_setup_produces_correct_entities(hass):
         await hass.async_block_till_done()
 
     entity_registry = er.async_get(hass)
-    entries = [
-        _entity_snapshot(hass, e)
-        for e in entity_registry.entities.values()
+    registry_entries = [
+        e for e in entity_registry.entities.values()
         if e.config_entry_id == entry.entry_id
     ]
+    entries = [_entity_snapshot(hass, e) for e in registry_entries]
 
     device_registry = dr.async_get(hass)
     devices = [
@@ -79,16 +80,24 @@ async def test_setup_produces_correct_entities(hass):
         if entry.entry_id in d.config_entries
     ]
 
-    by_unique_id = lambda e: e["unique_id"]
-    assert sorted(entries, key=by_unique_id) == sorted(EXPECTED_V007, key=by_unique_id)
+    # All entities attach to a single device. Implicit in EXPECTED_DEVICES
+    # having one row, but explicit is clearer and gives a better error if a
+    # future change accidentally splits entities across devices.
+    device_ids = {e.device_id for e in registry_entries}
+    assert len(device_ids) == 1, f"expected entities to share one device, got {device_ids}"
 
-    by_identifiers = lambda d: str(d["identifiers"])
-    assert sorted(devices, key=by_identifiers) == sorted(EXPECTED_DEVICES, key=by_identifiers)
+    assert sorted(entries, key=itemgetter("unique_id")) == sorted(
+        EXPECTED_V007, key=itemgetter("unique_id")
+    )
+    assert sorted(devices, key=itemgetter("identifiers")) == sorted(
+        EXPECTED_DEVICES, key=itemgetter("identifiers")
+    )
 
     # State-value assertions: every sensor's JSON-key -> state wiring is locked.
     for entity_id, expected in EXPECTED_STATES.items():
-        actual = hass.states.get(entity_id).state
-        assert actual == expected, f"{entity_id}: expected {expected!r}, got {actual!r}"
+        state = hass.states.get(entity_id)
+        assert state is not None, f"{entity_id} did not register"
+        assert state.state == expected, f"{entity_id}: expected {expected!r}, got {state.state!r}"
 
 
 EXPECTED_V007 = [
